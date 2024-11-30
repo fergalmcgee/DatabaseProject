@@ -1,16 +1,22 @@
+require('dotenv').config(); // Load environment variables
 const express = require('express');
 const connectDB = require('./db/db'); // Import the MongoDB connection file
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const app = express(); // Initialize the Express app
 
 // Add this middleware before your routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(cors());
 
 const studentRoutes = require('./routes/studentRoutes');
 const teacherRoutes = require('./routes/teacherRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const classRoutes = require('./routes/classRoutes');
+const authRoutes = require('./routes/authRoutes'); // Import auth routes
 
 
 // Use routes
@@ -18,6 +24,7 @@ app.use('/api/students', studentRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/classes', classRoutes);
+app.use('/api/auth', authRoutes); // Add auth routes
 
 // Connect to the database
 connectDB();

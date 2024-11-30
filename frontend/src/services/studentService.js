@@ -1,28 +1,25 @@
 import axios from 'axios';
 
-// Get all students
-export const getStudents = async () => {
-    try {
-        const response = await axios.get('/api/students/all');
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching students:', error);
-        throw error;
-    }
-};
+const BASE_URL = '/api/students';
 
-// Add a new student
-export const addStudent = async (student) => {
+// Service to add a new student
+export const addStudent = async (studentData) => {
     try {
-        console.log('Sending data to backend:', student); // Debug log
-        const response = await axios.post('/api/students/add', JSON.stringify(student), {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
+        const response = await axios.post(`${BASE_URL}/add`, studentData);
         return response.data;
     } catch (error) {
         console.error('Error adding student:', error.response?.data || error.message);
-        throw error;
+        throw error.response?.data || error;
+    }
+};
+
+// Service to fetch all students
+export const getStudents = async () => {
+    try {
+        const response = await axios.get(`${BASE_URL}/all`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching students:', error.response?.data || error.message);
+        throw error.response?.data || error;
     }
 };

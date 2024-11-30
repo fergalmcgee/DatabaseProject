@@ -1,31 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const Student = require('../models/Student'); // Import Student model
+const Student = require('../models/Student');
 
 // Add a new student
 router.post('/add', async (req, res) => {
-    console.log('Received request body:', req.body);
     try {
-        const { name, studentId, class: studentClass } = req.body;
+        const { name, class: className } = req.body;
 
-        if (!name || !studentId) {
-            return res.status(400).json({ message: 'Name and Student ID are required' });
-        }
+        // Generate a unique student ID (you can modify this format)
+        const studentCount = await Student.countDocuments();
+        const studentId = `ST${String(studentCount + 1).padStart(4, '0')}`;
 
         const newStudent = new Student({
             name,
             studentId,
-            class: studentClass,
+            class: className
         });
 
         await newStudent.save();
         res.status(201).json({ message: 'Student added successfully', student: newStudent });
     } catch (error) {
-        console.error('Error adding student:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
-
 
 // Get all students
 router.get('/all', async (req, res) => {
