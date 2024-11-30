@@ -3,6 +3,7 @@ const router = express.Router();
 const Teacher = require('../models/Teacher'); // Import Teacher model
 const bcrypt = require('bcrypt'); // Make sure this is imported!
 const { authenticate, authorizeAdmin } = require('../middleware/authMiddleware');
+const Class = require('../models/Class'); // Import Class model
 
 // Make sure all these routes are defined
 router.get('/', authenticate, async (req, res) => {
@@ -59,6 +60,30 @@ router.delete('/:id', authenticate, authorizeAdmin, async (req, res) => {
         res.status(200).json({ message: 'Teacher deleted successfully' });
     } catch (error) {
         console.error('Error deleting teacher:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Get classes for a specific teacher
+router.get('/:teacherId/classes', authenticate, async (req, res) => {
+    try {
+        const teacherId = req.params.teacherId;
+        console.log('Fetching classes for teacher:', teacherId); // Debug log
+        
+        // Find all classes where teacher matches the teacherId
+        const classes = await Class.find({ teacher: teacherId })
+            .populate('students')
+            .populate('teacher');
+        
+        console.log('Found classes:', classes); // Debug log
+        
+        if (!classes) {
+            return res.status(404).json({ message: 'No classes found for this teacher' });
+        }
+
+        res.status(200).json(classes);
+    } catch (error) {
+        console.error('Error fetching teacher classes:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });

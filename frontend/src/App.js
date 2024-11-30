@@ -4,6 +4,9 @@ import { getTeachers, addTeacher, deleteTeacher } from './services/teacherServic
 import { getAllClasses, addClass } from './services/classServices';
 import AdminLogin from './services/AdminLogin';
 import axios from 'axios';
+import LoginSelection from './services/LoginSelection';
+import TeacherLogin from './services/TeacherLogin';
+import TeacherDashboard from './services/TeacherDashboard';
 
 function App() {
     // Authentication State
@@ -28,6 +31,8 @@ function App() {
     const [bulkClass, setBulkClass] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
     const [filteredStudents, setFilteredStudents] = useState([]);
+    const [userType, setUserType] = useState(localStorage.getItem('userType') || '');
+    const [teacher, setTeacher] = useState(JSON.parse(localStorage.getItem('teacherData') || 'null'));
 
     // All useEffect hooks together
     useEffect(() => {
@@ -52,14 +57,44 @@ function App() {
     // Get unique classes from students array
     const uniqueClasses = [...new Set(students.map(student => student.class))];
     
-    // Styles for tabs
+    // Updated styles
+    const containerStyle = {
+        padding: '30px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        backgroundColor: '#f8f9fa'
+    };
+
+    const headerStyle = {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '30px',
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '10px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    };
+
+    const tabContainerStyle = {
+        display: 'flex',
+        gap: '2px',
+        marginBottom: '20px',
+        backgroundColor: 'white',
+        padding: '10px',
+        borderRadius: '10px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    };
+
     const tabStyle = {
-        padding: '10px 20px',
-        margin: '0 5px',
-        cursor: 'pointer',
-        backgroundColor: '#f0f0f0',
+        padding: '12px 24px',
+        backgroundColor: 'transparent',
+        color: '#6c757d',
         border: 'none',
-        borderRadius: '5px'
+        borderRadius: '5px',
+        cursor: 'pointer',
+        fontWeight: '500',
+        transition: 'all 0.3s ease'
     };
 
     const activeTabStyle = {
@@ -68,10 +103,54 @@ function App() {
         color: 'white'
     };
 
-    const containerStyle = {
+    const contentAreaStyle = {
+        backgroundColor: 'white',
         padding: '20px',
-        maxWidth: '800px',
-        margin: '0 auto'
+        borderRadius: '10px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    };
+
+    const buttonStyle = {
+        padding: '10px 20px',
+        backgroundColor: '#28a745',
+        color: 'white',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease'
+    };
+
+    const inputStyle = {
+        width: '100%',
+        padding: '8px 12px',
+        marginBottom: '10px',
+        border: '1px solid #ced4da',
+        borderRadius: '4px',
+        fontSize: '14px'
+    };
+
+    // Add these new style objects
+    const cardContainerStyle = {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+        gap: '20px',
+        marginTop: '20px'
+    };
+
+    const cardStyle = {
+        padding: '15px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        transition: 'transform 0.2s ease'
+    };
+
+    const formGroupStyle = {
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        marginBottom: '20px'
     };
 
     // Define ALL fetch functions
@@ -100,7 +179,9 @@ function App() {
 
     const fetchClasses = async () => {
         try {
+            console.log('Fetching classes...'); // Debug log
             const data = await getAllClasses();
+            console.log('Classes data:', data); // Debug log
             setClasses(data);
         } catch (error) {
             console.error('Error fetching classes:', error);
@@ -110,7 +191,10 @@ function App() {
     const handleLogout = () => {
         setToken(null);
         setIsAuthenticated(false);
+        setUserType('');
         localStorage.removeItem('token');
+        localStorage.removeItem('userType');
+        localStorage.removeItem('teacherData');
         delete axios.defaults.headers.common['Authorization'];
     };
 
@@ -123,9 +207,31 @@ function App() {
         }
     };
 
-    // If not authenticated, show login
+    useEffect(() => {
+        if (!localStorage.getItem('token')) {
+            setIsAuthenticated(false);
+            setUserType('');
+            setToken(null);
+        }
+    }, []);
+
+    // If not authenticated, show login selection first
     if (!isAuthenticated) {
-        return <AdminLogin setToken={setToken} />;
+        // Clear any leftover state when showing login selection
+        if (!userType) {
+            return <LoginSelection setUserType={setUserType} />;
+        }
+        if (userType === 'admin') {
+            return <AdminLogin setToken={setToken} />;
+        }
+        if (userType === 'teacher') {
+            return <TeacherLogin setTeacher={setTeacher} setIsAuthenticated={setIsAuthenticated} />;
+        }
+    }
+
+    // Add teacher dashboard rendering
+    if (isAuthenticated && userType === 'teacher') {
+        return <TeacherDashboard teacher={teacher} />;
     }
 
     // Existing handler functions
@@ -212,171 +318,156 @@ function App() {
 
     return (
         <div style={containerStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>School Management System</h1>
+            <div style={headerStyle}>
+                <h1 style={{ margin: 0, color: '#2c3e50' }}>School Management System</h1>
                 <button 
                     onClick={handleLogout}
                     style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
+                        ...buttonStyle,
+                        backgroundColor: '#dc3545'
                     }}
+                    onMouseOver={e => e.target.style.backgroundColor = '#c82333'}
+                    onMouseOut={e => e.target.style.backgroundColor = '#dc3545'}
                 >
                     Logout
                 </button>
             </div>
-            
-            {/* Navigation Tabs */}
-            <div style={{ marginBottom: '20px' }}>
-                <button 
-                    style={activeTab === 'students' ? activeTabStyle : tabStyle}
-                    onClick={() => setActiveTab('students')}
-                >
-                    Students
-                </button>
-                <button 
-                    style={activeTab === 'teachers' ? activeTabStyle : tabStyle}
-                    onClick={() => setActiveTab('teachers')}
-                >
-                    Teachers
-                </button>
-                <button 
-                    style={activeTab === 'classes' ? activeTabStyle : tabStyle}
-                    onClick={() => setActiveTab('classes')}
-                >
-                    Classes
-                </button>
+
+            <div style={tabContainerStyle}>
+                {['Students', 'Teachers', 'Classes'].map(tab => (
+                    <button
+                        key={tab.toLowerCase()}
+                        onClick={() => setActiveTab(tab.toLowerCase())}
+                        style={activeTab === tab.toLowerCase() ? activeTabStyle : tabStyle}
+                    >
+                        {tab}
+                    </button>
+                ))}
             </div>
 
-            {/* Tab Content */}
-            {activeTab === 'students' && (
-                <div>
-                    <h2>Add Students</h2>
-                    <div style={{ marginBottom: '20px' }}>
-                        <div style={{ marginBottom: '10px' }}>
+            <div style={contentAreaStyle}>
+                {/* Keep existing tab content but update their styling using the new style objects */}
+                {activeTab === 'students' && (
+                    <div>
+                        <div style={formGroupStyle}>
+                            <h2 style={{ color: '#2c3e50', marginTop: 0 }}>Add Students</h2>
                             <input
                                 type="text"
                                 placeholder="Class Name"
                                 value={bulkClass}
                                 onChange={(e) => setBulkClass(e.target.value)}
-                                style={{ marginRight: '10px', width: '200px' }}
+                                style={inputStyle}
                             />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
                             <textarea
                                 placeholder="Enter student names (one per line)"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 rows="10"
-                                style={{ width: '100%', maxWidth: '400px' }}
+                                style={{ ...inputStyle, resize: 'vertical' }}
                             />
+                            <button 
+                                onClick={handleAddStudent}
+                                disabled={!name.trim() || !bulkClass.trim()}
+                                style={buttonStyle}
+                            >
+                                Add Students
+                            </button>
                         </div>
-                        <button 
-                            onClick={handleAddStudent}
-                            disabled={!name.trim() || !bulkClass.trim()}
-                        >
-                            Add Students
-                        </button>
-                    </div>
-                    <h3>Students List</h3>
-                    <ul>
-                        {students.map((student) => (
-                            <li key={student._id || student.studentId}>
-                                {`${student.name} - ${student.class} - ID: ${student.studentId}`}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
 
-            {activeTab === 'teachers' && (
-                <div>
-                    <h2>Add New Teacher</h2>
-                    <div style={{ marginBottom: '20px' }}>
-                        <input
-                            type="text"
-                            placeholder="Teacher Name"
-                            value={teacherName}
-                            onChange={(e) => setTeacherName(e.target.value)}
-                            style={{ marginRight: '10px', width: '200px' }}
-                        />
-                        <input
-                            type="email"
-                            placeholder="Email"
-                            value={teacherEmail}
-                            onChange={(e) => setTeacherEmail(e.target.value)}
-                            style={{ marginRight: '10px', width: '200px' }}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Subject"
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                            style={{ marginRight: '10px', width: '200px' }}
-                        />
-                        <input
-                            type="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{ marginRight: '10px', width: '200px' }}
-                        />
-                        <button onClick={handleAddTeacher}>Add Teacher</button>
+                        <h3 style={{ color: '#2c3e50' }}>Students List</h3>
+                        <div style={cardContainerStyle}>
+                            {students.map((student) => (
+                                <div key={student._id || student.studentId} style={cardStyle}>
+                                    <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>{student.name}</h4>
+                                    <p style={{ margin: '0', color: '#6c757d' }}>Class: {student.class}</p>
+                                    <p style={{ margin: '5px 0 0', color: '#6c757d' }}>ID: {student.studentId}</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <h3>Teachers List</h3>
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                        {teachers.map((teacher) => (
-                            <li key={teacher._id} style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center',
-                                marginBottom: '10px',
-                                padding: '8px',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px'
-                            }}>
-                                <span>{`${teacher.name} - ${teacher.subject || 'No subject assigned'}`}</span>
-                                <button 
-                                    onClick={() => handleDeleteTeacher(teacher._id)}
-                                    style={{
-                                        backgroundColor: '#dc3545',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '5px 10px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Delete
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+                )}
 
-            {activeTab === 'classes' && (
-                <div>
-                    <h2>Add New Class</h2>
-                    <div style={{ marginBottom: '20px' }}>
-                        <div style={{ marginBottom: '15px' }}>
+                {activeTab === 'teachers' && (
+                    <div>
+                        <div style={formGroupStyle}>
+                            <h2 style={{ color: '#2c3e50', marginTop: 0 }}>Add New Teacher</h2>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Teacher Name"
+                                    value={teacherName}
+                                    onChange={(e) => setTeacherName(e.target.value)}
+                                    style={inputStyle}
+                                />
+                                <input
+                                    type="email"
+                                    placeholder="Email"
+                                    value={teacherEmail}
+                                    onChange={(e) => setTeacherEmail(e.target.value)}
+                                    style={inputStyle}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Subject"
+                                    value={subject}
+                                    onChange={(e) => setSubject(e.target.value)}
+                                    style={inputStyle}
+                                />
+                                <input
+                                    type="password"
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <button onClick={handleAddTeacher} style={buttonStyle}>Add Teacher</button>
+                        </div>
+
+                        <h3 style={{ color: '#2c3e50' }}>Teachers List</h3>
+                        <div style={cardContainerStyle}>
+                            {teachers.map((teacher) => (
+                                <div key={teacher._id} style={cardStyle}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                        <div>
+                                            <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>{teacher.name}</h4>
+                                            <p style={{ margin: '0 0 5px', color: '#6c757d' }}>{teacher.email}</p>
+                                            <p style={{ margin: '0', color: '#6c757d' }}>Subject: {teacher.subject}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleDeleteTeacher(teacher._id)}
+                                            style={{
+                                                ...buttonStyle,
+                                                backgroundColor: '#dc3545',
+                                                padding: '5px 10px',
+                                                fontSize: '12px'
+                                            }}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'classes' && (
+                    <div>
+                        <div style={formGroupStyle}>
+                            <h2 style={{ color: '#2c3e50', marginTop: 0 }}>Add New Class</h2>
                             <input
                                 type="text"
                                 placeholder="Class Name"
                                 value={className}
                                 onChange={(e) => setClassName(e.target.value)}
-                                style={{ marginRight: '10px', width: '200px' }}
+                                style={inputStyle}
                             />
-                        </div>
-                        
-                        <div style={{ marginBottom: '15px' }}>
+                            
                             <select
                                 value={selectedTeacher}
                                 onChange={(e) => setSelectedTeacher(e.target.value)}
-                                style={{ marginRight: '10px', width: '200px' }}
+                                style={inputStyle}
                             >
                                 <option value="">Select Teacher</option>
                                 {teachers.map((teacher) => (
@@ -385,13 +476,11 @@ function App() {
                                     </option>
                                 ))}
                             </select>
-                        </div>
 
-                        <div style={{ marginBottom: '15px' }}>
                             <select
                                 value={selectedClass}
                                 onChange={(e) => setSelectedClass(e.target.value)}
-                                style={{ marginRight: '10px', width: '200px' }}
+                                style={inputStyle}
                             >
                                 <option value="">Select Student Class</option>
                                 {uniqueClasses.map((className) => (
@@ -400,66 +489,80 @@ function App() {
                                     </option>
                                 ))}
                             </select>
+
+                            {selectedClass && (
+                                <div style={{ marginTop: '15px' }}>
+                                    <button 
+                                        onClick={handleSelectAllStudents}
+                                        style={{
+                                            ...buttonStyle,
+                                            marginBottom: '10px',
+                                            backgroundColor: '#6c757d'
+                                        }}
+                                    >
+                                        {selectedStudents.length === filteredStudents.length 
+                                            ? 'Deselect All' 
+                                            : 'Select All Students'}
+                                    </button>
+                                    <div style={{ 
+                                        maxHeight: '200px', 
+                                        overflowY: 'auto',
+                                        border: '1px solid #ced4da',
+                                        borderRadius: '4px',
+                                        padding: '10px'
+                                    }}>
+                                        {filteredStudents.map((student) => (
+                                            <div key={student._id} style={{ marginBottom: '8px' }}>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedStudents.includes(student._id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedStudents([...selectedStudents, student._id]);
+                                                            } else {
+                                                                setSelectedStudents(selectedStudents.filter(id => id !== student._id));
+                                                            }
+                                                        }}
+                                                    />
+                                                    {student.name} - {student.studentId}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={handleAddClass}
+                                disabled={!className || !selectedTeacher || selectedStudents.length === 0}
+                                style={{
+                                    ...buttonStyle,
+                                    marginTop: '20px',
+                                    opacity: (!className || !selectedTeacher || selectedStudents.length === 0) ? 0.5 : 1
+                                }}
+                            >
+                                Add Class
+                            </button>
                         </div>
 
-                        {selectedClass && (
-                            <div style={{ marginBottom: '15px' }}>
-                                <button 
-                                    onClick={handleSelectAllStudents}
-                                    style={{ marginBottom: '10px' }}
-                                >
-                                    {selectedStudents.length === filteredStudents.length 
-                                        ? 'Deselect All' 
-                                        : 'Select All Students'}
-                                </button>
-                                <div style={{ 
-                                    maxHeight: '200px', 
-                                    overflowY: 'auto',
-                                    border: '1px solid #ccc',
-                                    padding: '10px'
-                                }}>
-                                    {filteredStudents.map((student) => (
-                                        <div key={student._id} style={{ marginBottom: '5px' }}>
-                                            <label>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedStudents.includes(student._id)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedStudents([...selectedStudents, student._id]);
-                                                        } else {
-                                                            setSelectedStudents(selectedStudents.filter(id => id !== student._id));
-                                                        }
-                                                    }}
-                                                />
-                                                {' '}{student.name} - {student.studentId}
-                                            </label>
-                                        </div>
-                                    ))}
+                        <h3 style={{ color: '#2c3e50' }}>Classes List</h3>
+                        <div style={cardContainerStyle}>
+                            {classes.map((classItem) => (
+                                <div key={classItem._id} style={cardStyle}>
+                                    <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>{classItem.name}</h4>
+                                    <p style={{ margin: '0 0 5px', color: '#6c757d' }}>
+                                        Teacher: {classItem.teacher?.name || 'Not assigned'}
+                                    </p>
+                                    <p style={{ margin: '0', color: '#6c757d' }}>
+                                        Students: {classItem.students?.length || 0}
+                                    </p>
                                 </div>
-                            </div>
-                        )}
-
-                        <button 
-                            onClick={handleAddClass}
-                            disabled={!className || !selectedTeacher || selectedStudents.length === 0}
-                        >
-                            Add Class
-                        </button>
+                            ))}
+                        </div>
                     </div>
-
-                    <h3>Classes List</h3>
-                    <ul>
-                        {classes.map((classItem) => (
-                            <li key={classItem._id}>
-                                {`${classItem.name} - Teacher: ${classItem.teacher?.name || 'Not assigned'}`}
-                                <br />
-                                {`Students: ${classItem.students?.length || 0}`}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

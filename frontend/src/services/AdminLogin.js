@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import axios from 'axios';
 
 const AdminLogin = ({ setToken }) => {
@@ -10,7 +10,7 @@ const AdminLogin = ({ setToken }) => {
         console.log('Attempting login with:', { username }); // Debug log
         
         try {
-            const response = await axios.post('http://localhost:5001/api/auth/login', {
+            const response = await axios.post('http://192.168.71.54:5001/api/auth/login', {
                 username,
                 password
             });
@@ -19,6 +19,7 @@ const AdminLogin = ({ setToken }) => {
             
             if (response.data.token) {
                 localStorage.setItem('token', response.data.token);
+                localStorage.setItem('userType', 'admin');
                 setToken(response.data.token);
                 axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
             } else {

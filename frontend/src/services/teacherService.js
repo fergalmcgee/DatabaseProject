@@ -55,4 +55,28 @@ export const deleteTeacher = async (teacherId) => {
         console.error('Delete request failed:', error.response?.data); // Debug log
         throw error;
     }
+};
+
+export const getTeacherClasses = async (teacherId) => {
+    try {
+        console.log('Fetching classes for teacher:', teacherId);
+        const response = await api.get(`/teachers/${teacherId}/classes`);
+        console.log('Teacher classes response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching teacher classes:', error);
+        throw error;
+    }
+};
+
+export const getClassStudents = async (classId) => {
+    try {
+        console.log('Fetching students for class:', classId);
+        const response = await api.get(`/classes/${classId}/students`);
+        console.log('Students response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching class students:', error);
+        throw error;
+    }
 }; 
